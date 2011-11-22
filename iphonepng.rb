@@ -38,7 +38,8 @@ PNG_HEADER = "\x89PNG\r\n\x1a\n"
 
 def normalize(oldPNG)
   if oldPNG[0, 8] != PNG_HEADER then
-    nil
+      puts "Corrupted PNG file"
+      return nil
   end
   
   newPNG = String.new(oldPNG[0, 8])

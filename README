@@ -1,0 +1,6 @@
+The PNG file format inside iPhone application is slightly different from
+normal PNG files. So when you get the png images from iphone app package,
+you should make some conversion.
+
+I wrote this handy Ruby script to do it for me. Let me know if you think
+it is useful.
