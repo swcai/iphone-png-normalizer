@@ -44,6 +44,8 @@ def normalize(oldPNG)
   
   newPNG = String.new(oldPNG[0, 8])
   pos = 8
+  sections = []
+
   while pos < oldPNG.length
      # use "N" instead of "L", using network endian not native endian
     length = oldPNG[pos, 4].unpack('N')[0]
@@ -53,20 +55,36 @@ def normalize(oldPNG)
     pos += length + 12
     
     next if type == "CgBI"
-    # puts "#{length} #{type} #{crc}"
     
     if type == "IHDR" then
       width = data[0, 4].unpack("N")[0]
       height = data[4, 4].unpack("N")[0]
     end
-    
-    if type == "IDAT" then
-      bufSize = width * height * 4 + height
+
+		break if type == "IEND"
+
+		if type == 'IDAT' && sections.size > 0 && sections.last.first == 'IDAT'
+			# Append to the previous IDAT
+			sections.last[1] += length
+			sections.last[2] += data
+		else
+			sections << [type, length, data, crc, width, height]
+		end
+
+  end
+
+	sections.map do |(type, length, data, crc, width, height)|
+
+		if type == "IDAT" then
+
+			bufSize = width * height * 4 + height
       data = decompress(data[0, bufSize])
-      # duplicate the content of old data at first to avoid creating too many string objects
+
+			# duplicate the content of old data at first to avoid creating too many string objects
       newdata = String.new(data)
       pos = 0
-      for y in 0...height
+
+			for y in 0...height
         newdata[pos] = data[pos, 1]
         pos += 1
         for x in 0...width
@@ -77,17 +95,19 @@ def normalize(oldPNG)
           pos += 4
         end
       end
+
       data = compress(newdata)
       length = data.length
       crc = Zlib::crc32(type)
       crc = Zlib::crc32(data, crc)
       crc = (crc + 0x100000000) % 0x100000000
     end
-    
-    newPNG += [length].pack("N") + type + (data if length > 0) + [crc].pack("N")
-    break if type == "IEND"
-  end
-  newPNG
+
+		newPNG += [length].pack("N") + type + (data if length > 0) + [crc].pack("N")
+
+	end
+
+	newPNG
 end
 
 def normalize_png(filename)
