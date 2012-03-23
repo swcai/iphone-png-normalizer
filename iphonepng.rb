@@ -74,7 +74,7 @@ def normalize(oldPNG)
     
   end
 
-  sections.map do |(type, length, data, crc, width, height)|
+  sections.each do |(type, length, data, crc, width, height)|
 
     if type == "IDAT" then
 
