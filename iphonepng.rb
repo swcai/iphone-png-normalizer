@@ -38,8 +38,8 @@ PNG_HEADER = "\x89PNG\r\n\x1a\n"
 
 def normalize(oldPNG)
   if oldPNG[0, 8] != PNG_HEADER then
-      puts "Corrupted PNG file"
-      return nil
+    puts "Corrupted PNG file"
+    return nil
   end
   
   newPNG = String.new(oldPNG[0, 8])
@@ -47,7 +47,8 @@ def normalize(oldPNG)
   sections = []
 
   while pos < oldPNG.length
-     # use "N" instead of "L", using network endian not native endian
+    
+    # use "N" instead of "L", using network endian not native endian
     length = oldPNG[pos, 4].unpack('N')[0]
     type = oldPNG[pos+4, 4]
     data = oldPNG[pos+8, length]
@@ -61,30 +62,30 @@ def normalize(oldPNG)
       height = data[4, 4].unpack("N")[0]
     end
 
-		break if type == "IEND"
+    if type == 'IDAT' && sections.size > 0 && sections.last.first == 'IDAT'
+      # Append to the previous IDAT
+      sections.last[1] += length
+      sections.last[2] += data
+    else
+      sections << [type, length, data, crc, width, height]
+    end
 
-		if type == 'IDAT' && sections.size > 0 && sections.last.first == 'IDAT'
-			# Append to the previous IDAT
-			sections.last[1] += length
-			sections.last[2] += data
-		else
-			sections << [type, length, data, crc, width, height]
-		end
-
+    break if type == "IEND"
+    
   end
 
-	sections.map do |(type, length, data, crc, width, height)|
+  sections.each do |(type, length, data, crc, width, height)|
 
-		if type == "IDAT" then
+    if type == "IDAT" then
 
-			bufSize = width * height * 4 + height
+      bufSize = width * height * 4 + height
       data = decompress(data[0, bufSize])
 
-			# duplicate the content of old data at first to avoid creating too many string objects
+      # duplicate the content of old data at first to avoid creating too many string objects
       newdata = String.new(data)
       pos = 0
 
-			for y in 0...height
+      for y in 0...height
         newdata[pos] = data[pos, 1]
         pos += 1
         for x in 0...width
@@ -103,12 +104,13 @@ def normalize(oldPNG)
       crc = (crc + 0x100000000) % 0x100000000
     end
 
-		newPNG += [length].pack("N") + type + (data if length > 0) + [crc].pack("N")
+    newPNG += [length].pack("N") + type + (data || '') + [crc].pack("N")
 
-	end
+  end
 
-	newPNG
+  newPNG
 end
+
 
 def normalize_png(filename)
   puts "#{filename}"
