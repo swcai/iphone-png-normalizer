@@ -55,44 +55,41 @@ def normalize(oldPNG)
     pos += length + 12
     
     next if type == "CgBI"
-    
+
     if type == "IHDR" then
-      width = data[0, 4].unpack("N")[0]
-      height = data[4, 4].unpack("N")[0]
+	    width = data[0, 4].unpack("N")[0]
+	    height = data[4, 4].unpack("N")[0]
     end
 
-		break if type == "IEND"
+    break if type == "IEND"
 
-		if type == 'IDAT' && sections.size > 0 && sections.last.first == 'IDAT'
-			# Append to the previous IDAT
-			sections.last[1] += length
-			sections.last[2] += data
-		else
-			sections << [type, length, data, crc, width, height]
-		end
+    if type == 'IDAT' && sections.size > 0 && sections.last.first == 'IDAT'
+	    # Append to the previous IDAT
+	    sections.last[1] += length
+	    sections.last[2] += data
+    else
+	    sections << [type, length, data, crc, width, height]
+    end
 
   end
 
-	sections.map do |(type, length, data, crc, width, height)|
-
-		if type == "IDAT" then
-
-			bufSize = width * height * 4 + height
+  sections.map do |(type, length, data, crc, width, height)|
+    if type == "IDAT" then
+      bufSize = width * height * 4 + height
       data = decompress(data[0, bufSize])
-
-			# duplicate the content of old data at first to avoid creating too many string objects
+      # duplicate the content of old data at first to avoid creating too many string objects
       newdata = String.new(data)
       pos = 0
 
-			for y in 0...height
+      for y in 0...height
         newdata[pos] = data[pos, 1]
         pos += 1
         for x in 0...width
           newdata[pos+0] = data[pos+2, 1]
           newdata[pos+1] = data[pos+1, 1]
           newdata[pos+2] = data[pos+0, 1]
-          newdata[pos+3] = data[pos+3, 1]
-          pos += 4
+	  newdata[pos+3] = data[pos+3, 1]
+	  pos += 4
         end
       end
 
@@ -103,11 +100,9 @@ def normalize(oldPNG)
       crc = (crc + 0x100000000) % 0x100000000
     end
 
-		newPNG += [length].pack("N") + type + (data if length > 0) + [crc].pack("N")
-
-	end
-
-	newPNG
+    newPNG += [length].pack("N") + type + (data if length > 0) + [crc].pack("N")
+  end
+  newPNG
 end
 
 def normalize_png(filename)
